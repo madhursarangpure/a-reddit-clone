@@ -4,7 +4,7 @@ pipeline {
         jdk 'jdk17'
         nodejs 'node16'
     }
-    evironment {
+    environment {
         SCANNER_HOME = tool 'sonar-scanner'
         APP_NAME = "reddit-clone-pipeline"
         RELEASE = "1.0.0"
@@ -12,9 +12,8 @@ pipeline {
         DOCKER_PASS = 'dockerhub'
         IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
-	    JENKINS_API_TOKEN = credentials("JENKINS_API_TOKEN")
+	JENKINS_API_TOKEN = credentials("JENKINS_API_TOKEN")
     }
-
     stages {
         stage('clean workspace') {
             steps {
@@ -28,7 +27,7 @@ pipeline {
         }
         stage("Sonarqube Analysis") {
             steps {
-                withSonarQubeEnv('SonarQube-Server') {
+                withSonarQubeEnv('Sonarqube-Server') {
                     sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=reddit-clone-ci \
                     -Dsonar.projectKey=reddit-clone-ci'''
                 }
@@ -37,7 +36,7 @@ pipeline {
         stage("Quality Gate") {
             steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'sonarqube-token'
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonarqube-token'
                 }
             }
         }
@@ -50,8 +49,8 @@ pipeline {
             steps {
                 sh "trivy fs . > trivyfs.txt"
              }
-        }
-        stage("Build & Push Docker Image") {
+         }
+	 stage("Build & Push Docker Image") {
              steps {
                  script {
                      docker.withRegistry('',DOCKER_PASS) {
@@ -64,6 +63,4 @@ pipeline {
                  }
              }
          }
-        
-    }
 }
