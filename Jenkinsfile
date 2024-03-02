@@ -4,7 +4,6 @@ pipeline {
         jdk 'jdk17'
         nodejs 'node16'
     }
-    
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
         APP_NAME = "reddit-clone-pipeline"
@@ -14,82 +13,40 @@ pipeline {
         IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
     }
-
     stages {
-        stage('clean workspace') {
+        stage ('Cleanup') {
             steps {
                 cleanWs()
             }
         }
-        stage('Checkout from Git') {
+        stage ('Checkout from Git') {
             steps {
                 git branch: 'main', url: 'https://github.com/madhursarangpure/a-reddit-clone.git'
             }
         }
-        stage("Sonarqube Analysis") {
-            steps {
-                withSonarQubeEnv('SonarQuber-server') {
-                    sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=reddit-clone-ci \
+        stage ('Sonarqube Analysis') {
+            withSonarQubeEnv('SonarQuber-server') {
+                sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=reddit-clone-ci \
                     -Dsonar.projectKey=reddit-clone-ci'''
-                }
             }
         }
-        stage("Quality Gate") {
+        stage ('Quality Gate') {
             steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'sonarqube-token'
+                    waitForQualityGate abortPipeline: false, credentialsId: 'SonarQube-Token'
                 }
             }
         }
-        stage('Install Dependencies') {
+        stage ('Install Dependencies') {
             steps {
                 sh "npm install"
             }
         }
-        stage('TRIVY FS SCAN') {
+        stage ('TRIVY FS SCAN') {
             steps {
                 sh "trivy fs . > trivyfs.txt"
              }
         }
-        stage("Build & Push Docker Image") {
-             steps {
-                 script {
-                     docker.withRegistry('',DOCKER_PASS) {
-                         docker_image = docker.build "${IMAGE_NAME}"
-                     }
-                     docker.withRegistry('',DOCKER_PASS) {
-                         docker_image.push("${IMAGE_TAG}")
-                         docker_image.push('latest')
-                    }
-                }
-            }
-        }
-        stage("Trivy Image Scan") {
-             steps {
-                 script {
-	              sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image 8871255273/reddit-clone-pipeline:latest --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table > trivyimage.txt')
-                }
-            }
-        }
-        stage ('Cleanup Artifacts') {
-             steps {
-                 script {
-                      sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
-                      sh "docker rmi ${IMAGE_NAME}:latest"
-                }
-            }
-        }
-        
+
     }
-    post {
-        always {
-           emailext attachLog: true,
-               subject: "'${currentBuild.result}'",
-               body: "Project: ${env.JOB_NAME}<br/>" +
-                   "Build Number: ${env.BUILD_NUMBER}<br/>" +
-                   "URL: ${env.BUILD_URL}<br/>",
-               to: 'maddy3937@gmail.com',                              
-               attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
-        }
-     }
 }
