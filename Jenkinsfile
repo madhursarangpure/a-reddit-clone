@@ -25,9 +25,11 @@ pipeline {
             }
         }
         stage ('Sonarqube Analysis') {
-            withSonarQubeEnv('SonarQuber-server') {
-                sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=reddit-clone-ci \
-                    -Dsonar.projectKey=reddit-clone-ci'''
+            steps {
+                withSonarQubeEnv('SonarQuber-server') {
+                    sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=reddit-clone-ci \
+                        -Dsonar.projectKey=reddit-clone-ci'''
+                }
             }
         }
         stage ('Quality Gate') {
