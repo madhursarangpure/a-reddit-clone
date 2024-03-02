@@ -60,15 +60,16 @@ pipeline {
                         docker_image.push('latest')
                     }
                  
+                }
             }
         }
         stage("Trivy Image Scan") {
-             steps {
-                 script {
+            steps {
+                script {
 	              sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image 8871255273/reddit-clone-pipeline:latest --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table > trivyimage.txt')
-                 }
-             }
-         }
+                }
+            }
+        }
 
     }
 }
